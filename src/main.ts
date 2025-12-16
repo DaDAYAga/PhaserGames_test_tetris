@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 
 // ===== 遊戲常數 =====
-const COLS = 10;        // 棋盤寬度（10 格）
-const ROWS = 20;        // 棋盤高度（20 格）
-const BLOCK_SIZE = 30;  // 每格的像素大小
+const GAME_WIDTH = 800;   // 遊戲畫面寬度
+const GAME_HEIGHT = 600;  // 遊戲畫面高度
+const COLS = 10;          // 棋盤寬度（10 格）
+const ROWS = 20;          // 棋盤高度（20 格）
+const BLOCK_SIZE = 30;    // 每格的像素大小
 
 // 遊戲場景
 class GameScene extends Phaser.Scene {
@@ -16,8 +18,8 @@ class GameScene extends Phaser.Scene {
     // 計算棋盤的起始位置（置中）
     const boardWidth = COLS * BLOCK_SIZE;
     const boardHeight = ROWS * BLOCK_SIZE;
-    const offsetX = (800 - boardWidth) / 2;
-    const offsetY = (600 - boardHeight) / 2;
+    const offsetX = (GAME_WIDTH - boardWidth) / 2;
+    const offsetY = (GAME_HEIGHT - boardHeight) / 2;
 
     // 畫出棋盤格線
     this.drawBoard(offsetX, offsetY);
@@ -56,8 +58,8 @@ class GameScene extends Phaser.Scene {
 // 遊戲設定
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
   backgroundColor: '#1a1a2e',
   scene: GameScene
 };
