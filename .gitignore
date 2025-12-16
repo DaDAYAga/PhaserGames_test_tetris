@@ -1,0 +1,29 @@
+# 依賴套件
+node_modules/
+
+# 打包輸出
+dist/
+
+# 編輯器設定
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+
+# 環境變數
+.env
+.env.local
+.env.*.local
+
+# 日誌
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# 快取
+.cache/
+*.tsbuildinfo
