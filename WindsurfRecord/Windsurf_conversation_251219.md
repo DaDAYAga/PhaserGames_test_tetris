@@ -3942,3 +3942,154 @@ src/
 git add .
 git commit -m "refactor: 拆分程式碼到不同檔案"
 ```
+
+### User Input
+
+我想先新增方塊堆疊；我目前的認知是，方塊落下後如果按左右移動方向或是方塊轉向，就還可以保留移動的容錯餘地，然後如果在限制時間內沒有按任何按鍵或是使用hard drop，方塊就會固定無法移動，並產生新的方塊，接著再判定堆疊，是這樣嗎
+
+### Planner Response
+
+你的理解非常接近！這個機制叫做「**Lock Delay**」（鎖定延遲）。讓我解釋標準俄羅斯方塊的規則：
+
+## 標準俄羅斯方塊的鎖定機制
+
+### 1. 基本流程
+```
+方塊下落 → 碰到底部/其他方塊 → 開始 Lock Delay 計時 → 時間到就鎖定
+```
+
+### 2. Lock Delay（鎖定延遲）
+- 方塊**碰到底部**後，不會立即鎖定
+- 有一段「容錯時間」（通常 500ms）
+- 在這段時間內可以：
+  - **左右移動**
+  - **旋轉**
+  - 每次成功移動/旋轉會**重置計時器**
+
+### 3. 鎖定條件
+- Lock Delay 時間到
+- 或按下 **Hard Drop**（立即鎖定）
+
+### 4. 鎖定後
+- 方塊固定在棋盤上
+- 檢查是否有完整的行（消行）
+- 生成新方塊
+
+---
+
+## 實作順序建議
+
+1. **碰撞偵測**：判斷方塊是否碰到底部或其他方塊
+2. **棋盤狀態**：記錄已固定的方塊
+3. **Lock Delay**：鎖定延遲機制
+4. **生成新方塊**
+5. **消行判定**
+
+---
+
+要開始實作嗎？我會從**碰撞偵測**和**棋盤狀態**開始。
+
+*Updated todo list*
+
+### Planner Response
+
+你想現在開始實作嗎？我會逐步進行：
+
+1. 先建立 `Board.ts` 來管理棋盤狀態
+2. 加入碰撞偵測
+3. 實作 Lock Delay
+4. 生成新方塊
+5. 消行判定
+
+告訴我「開始」就會進行！
+
+### User Input
+
+開始，但一步一步慢慢實作，我想先搞懂內容再繼續
+
+*Updated todo list*
+
+### Planner Response
+
+# Step 1：建立棋盤狀態（Board）
+
+## 先理解概念
+
+目前我們只有「正在下落的方塊」，但沒有記錄「已經固定的方塊」。
+
+我們需要一個 **二維陣列** 來記錄棋盤上每個格子的狀態：
+
+```
+棋盤 10 x 20 格
+
+grid[row][col] = 0      → 空格
+grid[row][col] = 顏色值  → 有方塊
+```
+
+視覺化：
+```
+     0 1 2 3 4 5 6 7 8 9  ← col
+   ┌─────────────────────┐
+ 0 │ 0 0 0 0 0 0 0 0 0 0 │
+ 1 │ 0 0 0 0 0 0 0 0 0 0 │
+ ...
+18 │ 0 0 0 0 0 0 0 0 0 0 │
+19 │ 0 0 Y Y 0 0 R R 0 0 │  ← 已固定的方塊
+   └─────────────────────┘
+   ↑ row
+```
+
+---
+
+## 建立 Board.ts
+
+*Edited relevant file*
+
+### Planner Response
+
+已建立 [Board.ts](cci:7://file:///c:/Users/ibpc-017/Desktop/PhaserGames_test_tetris/src/objects/Board.ts:0:0-0:0)！
+
+## 程式碼解說
+
+### 1. 棋盤資料結構
+
+```typescript
+private grid: number[][];
+```
+
+這是一個二維陣列，`grid[row][col]` 代表棋盤上某格的狀態：
+- `0` = 空格
+- `其他數值` = 方塊顏色（例如 `0xffff00` 黃色）
+
+### 2. 初始化空棋盤
+
+```typescript
+private createEmptyGrid(): number[][] {
+    const grid: number[][] = [];
+    
+    for (let row = 0; row < ROWS; row++) {
+        grid.push(new Array(COLS).fill(0));
+    }
+    
+    return grid;
+}
+```
+
+建立 20 行 x 10 列的陣列，全部填 0。
+
+### 3. 基本操作方法
+
+| 方法 | 說明 |
+|------|------|
+| [getCell(row, col)](cci:1://file:///c:/Users/ibpc-017/Desktop/PhaserGames_test_tetris/src/objects/Board.ts:27:4-34:5) | 取得某格的值 |
+| [setCell(row, col, value)](cci:1://file:///c:/Users/ibpc-017/Desktop/PhaserGames_test_tetris/src/objects/Board.ts:36:4-41:5) | 設定某格的值 |
+| [isEmpty(row, col)](cci:1://file:///c:/Users/ibpc-017/Desktop/PhaserGames_test_tetris/src/objects/Board.ts:43:4-46:5) | 檢查某格是否為空 |
+| [getGrid()](cci:1://file:///c:/Users/ibpc-017/Desktop/PhaserGames_test_tetris/src/objects/Board.ts:48:4-51:5) | 取得整個棋盤陣列 |
+
+---
+
+## 下一步
+
+現在棋盤有了，接下來要在 [GameScene](cci:2://file:///c:/Users/ibpc-017/Desktop/PhaserGames_test_tetris/src/main.ts:16:0-149:1) 中使用它，並加入碰撞偵測。
+
+**理解這個概念了嗎？準備好就告訴我「繼續」！**
