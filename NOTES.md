@@ -4,6 +4,8 @@
 - [場景生命週期](#場景生命週期)
 - [繪圖相關](#繪圖相關)
 - [遊戲物件](#遊戲物件)
+- [鍵盤輸入](#鍵盤輸入)
+- [遊戲機制](#遊戲機制)
 
 ---
 
@@ -107,4 +109,152 @@ Phaser 使用 16 進位數字表示顏色：
 ```typescript
 // 範例：在第 4 列、第 0 行畫一個黃色 O 形方塊
 this.drawPiece(O_SHAPE, 4, 0, 0xffff00);
+```
+
+### drawCurrentPiece()
+繪製當前方塊，會先清除舊的再畫新的。
+
+```typescript
+drawCurrentPiece() {
+    // 清除舊的方塊圖形
+    this.pieceGraphics.forEach(rect => rect.destroy());
+    this.pieceGraphics = [];
+
+    // 畫新的方塊...
+}
+```
+
+### tryMove(dir)
+嘗試移動方塊，會檢查邊界。
+
+| 參數 | 型別 | 說明 |
+|------|------|------|
+| `dir` | `number` | 移動方向：-1 左、1 右 |
+
+```typescript
+tryMove(dir: number) {
+    const newCol = this.currentCol + dir;
+    if (newCol < 0) return;  // 左邊界
+    if (newCol + O_SHAPE[0].length > COLS) return;  // 右邊界
+    this.currentCol = newCol;
+    this.drawCurrentPiece();
+}
+```
+
+### hardDrop()
+硬降（Hard Drop）- 直接落到最底部。
+
+```typescript
+hardDrop() {
+    // 計算最底部的位置
+    const maxRow = ROWS - O_SHAPE.length;
+    
+    // 直接移動到最底部
+    this.currentRow = maxRow;
+    this.drawCurrentPiece();
+    
+    // 重置下落計時器
+    this.dropTimer = 0;
+}
+```
+
+---
+
+## 鍵盤輸入
+
+### 建立按鍵監聽
+
+```typescript
+// 方向鍵（內建）
+this.cursors = this.input.keyboard!.createCursorKeys();
+
+// 單獨按鍵
+this.downKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+this.leftKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+this.rightKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+```
+
+### 按鍵狀態判斷
+
+```typescript
+// 持續按住
+if (this.leftKey.isDown) { ... }
+
+// 剛按下（只觸發一次）
+if (Phaser.Input.Keyboard.JustDown(this.leftKey)) { ... }
+```
+
+### 常用 KeyCodes
+
+| 按鍵 | KeyCodes |
+|------|----------|
+| 方向鍵 | `UP`, `DOWN`, `LEFT`, `RIGHT` |
+| 空白鍵 | `SPACE` |
+| Enter | `ENTER` |
+| ESC | `ESC` |
+| 字母 | `A`, `B`, `C`... |
+
+---
+
+## 遊戲機制
+
+### update() 參數
+
+```typescript
+update(_time: number, delta: number) {
+    // _time: 遊戲開始到現在的總毫秒數（底線表示未使用）
+    // delta: 距離上一幀的毫秒數（約 16ms）
+}
+```
+
+### 計時器模式
+
+```typescript
+// 累積時間
+this.dropTimer += delta;
+
+// 達到間隔就執行
+if (this.dropTimer >= this.dropInterval) {
+    this.dropTimer = 0;
+    // 執行動作...
+}
+```
+
+### DAS 機制（Delayed Auto Shift）
+
+俄羅斯方塊的標準按鍵處理：
+1. **首次按下**：立即移動
+2. **持續按住**：延遲一段時間後開始連續移動
+3. **連續移動**：以固定間隔重複移動
+
+```typescript
+// 相關變數
+private moveDelay: number = 200;     // 首次延遲（ms）
+private moveInterval: number = 250;  // 連續間隔（ms）
+private moveTimer: number = 0;
+private lastMoveDir: number = 0;     // -1 左, 1 右, 0 無
+
+// 邏輯
+if (dir !== 0) {
+    if (this.lastMoveDir !== dir) {
+        // 方向改變，立即移動
+        this.tryMove(dir);
+        this.moveTimer = 0;
+        this.lastMoveDir = dir;
+        return;
+    }
+
+    this.moveTimer += delta;
+    const interval = this.moveTimer < this.moveDelay 
+        ? this.moveDelay 
+        : this.moveInterval;
+
+    if (this.moveTimer >= interval) {
+        this.moveTimer = this.moveDelay;
+        this.tryMove(dir);
+    }
+} else {
+    this.moveTimer = 0;
+    this.lastMoveDir = 0;
+}
 ```
