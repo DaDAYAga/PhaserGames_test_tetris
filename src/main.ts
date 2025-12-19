@@ -7,8 +7,29 @@ const COLS = 10;          // 棋盤寬度（10 格）
 const ROWS = 20;          // 棋盤高度（20 格）
 const BLOCK_SIZE = 30;    // 每格的像素大小
 
+// O 形方塊（正方形）
+const O_SHAPE = [
+  [1, 1],
+  [1, 1]
+];
+
 // 遊戲場景
 class GameScene extends Phaser.Scene {
+  // 棋盤偏移量
+  private offsetX: number = 0;
+  private offsetY: number = 0;
+
+  // 當前方塊的位置
+  private currentCol: number = 4;  // 從中間開始
+  private currentRow: number = 0;  // 從頂部開始
+
+  // 下落計時器
+  private dropTimer: number = 0;
+  private dropInterval: number = 1000;  // 每 1000 毫秒（1 秒）下落一格
+
+  // 儲存方塊的圖形物件（用於清除重繪）
+  private pieceGraphics: Phaser.GameObjects.Rectangle[] = [];
+
   constructor() {
     super('GameScene');
   }
@@ -18,15 +39,62 @@ class GameScene extends Phaser.Scene {
     // 計算棋盤的起始位置（置中）
     const boardWidth = COLS * BLOCK_SIZE;
     const boardHeight = ROWS * BLOCK_SIZE;
-    const offsetX = (GAME_WIDTH - boardWidth) / 2;
-    const offsetY = (GAME_HEIGHT - boardHeight) / 2;
+    this.offsetX = (GAME_WIDTH - boardWidth) / 2;
+    this.offsetY = (GAME_HEIGHT - boardHeight) / 2;
 
     // 畫出棋盤格線
-    this.drawBoard(offsetX, offsetY);
+    this.drawBoard();
+
+    // 畫出初始方塊
+    this.drawCurrentPiece();
+  }
+
+  // update() 每幀執行（約 60 次/秒）
+  update(_time: number, delta: number) {
+    // delta 是距離上一幀的毫秒數
+    this.dropTimer += delta;
+
+    // 如果累積時間超過下落間隔
+    if (this.dropTimer >= this.dropInterval) {
+      this.dropTimer = 0;  // 重置計時器
+
+      // 檢查是否可以繼續下落（還沒到底部）
+      if (this.currentRow + O_SHAPE.length < ROWS) {
+        this.currentRow += 1;  // 往下移動一格
+        this.drawCurrentPiece();  // 重新繪製
+      }
+    }
+  }
+
+  // 繪製當前方塊（會先清除舊的）
+  drawCurrentPiece() {
+    // 清除舊的方塊圖形
+    this.pieceGraphics.forEach(rect => rect.destroy());
+    this.pieceGraphics = [];
+
+    // 畫新的方塊
+    for (let r = 0; r < O_SHAPE.length; r++) {
+      for (let c = 0; c < O_SHAPE[r].length; c++) {
+        if (O_SHAPE[r][c] === 1) {
+          const x = this.offsetX + (this.currentCol + c) * BLOCK_SIZE;
+          const y = this.offsetY + (this.currentRow + r) * BLOCK_SIZE;
+
+          const rect = this.add.rectangle(
+            x + BLOCK_SIZE / 2,
+            y + BLOCK_SIZE / 2,
+            BLOCK_SIZE - 2,
+            BLOCK_SIZE - 2,
+            0xffff00  // 黃色
+          );
+
+          this.pieceGraphics.push(rect);  // 儲存起來，下次清除用
+        }
+      }
+    }
   }
 
   // 畫棋盤格線
-  drawBoard(offsetX: number, offsetY: number) {
+  drawBoard() {
     const graphics = this.add.graphics();
     
     // 設定線條樣式：灰色、1px 寬
@@ -34,16 +102,16 @@ class GameScene extends Phaser.Scene {
 
     // 畫垂直線（11 條）
     for (let col = 0; col <= COLS; col++) {
-      const x = offsetX + col * BLOCK_SIZE;
-      graphics.moveTo(x, offsetY);
-      graphics.lineTo(x, offsetY + ROWS * BLOCK_SIZE);
+      const x = this.offsetX + col * BLOCK_SIZE;
+      graphics.moveTo(x, this.offsetY);
+      graphics.lineTo(x, this.offsetY + ROWS * BLOCK_SIZE);
     }
 
     // 畫水平線（21 條）
     for (let row = 0; row <= ROWS; row++) {
-      const y = offsetY + row * BLOCK_SIZE;
-      graphics.moveTo(offsetX, y);
-      graphics.lineTo(offsetX + COLS * BLOCK_SIZE, y);
+      const y = this.offsetY + row * BLOCK_SIZE;
+      graphics.moveTo(this.offsetX, y);
+      graphics.lineTo(this.offsetX + COLS * BLOCK_SIZE, y);
     }
 
     // 執行繪製
@@ -51,7 +119,30 @@ class GameScene extends Phaser.Scene {
 
     // 畫棋盤外框（白色）
     graphics.lineStyle(2, 0xffffff, 1);
-    graphics.strokeRect(offsetX, offsetY, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+    graphics.strokeRect(this.offsetX, this.offsetY, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+  }
+
+  // 畫一個俄羅斯方塊
+  drawPiece(shape: number[][], col: number, row: number, color: number) {
+    // 遍歷形狀陣列
+    for (let r = 0; r < shape.length; r++) {
+      for (let c = 0; c < shape[r].length; c++) {
+        // 如果這格是 1，就畫一個方塊
+        if (shape[r][c] === 1) {
+          const x = this.offsetX + (col + c) * BLOCK_SIZE;
+          const y = this.offsetY + (row + r) * BLOCK_SIZE;
+          
+          // 畫填滿的方塊
+          this.add.rectangle(
+            x + BLOCK_SIZE / 2,  // x 中心點
+            y + BLOCK_SIZE / 2,  // y 中心點
+            BLOCK_SIZE - 2,      // 寬度（留 2px 間隙）
+            BLOCK_SIZE - 2,      // 高度
+            color                // 顏色
+          );
+        }
+      }
+    }
   }
 }
 
